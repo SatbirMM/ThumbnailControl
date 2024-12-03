@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Reflection;
 using System.Windows.Forms;
+using System.Windows.Forms.VisualStyles;
 using ThumbnailViewer;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
@@ -21,17 +23,21 @@ namespace ThumbnailViewer
         private readonly FlowLayoutPanel _thumbnailPanel;
         private IThumbnailProvider _thumbnailProvider;
         private readonly Dictionary<int, PictureBox> _thumbnailCache;
-        private readonly VScrollBar _scrollBar;
+        private readonly System.Windows.Forms.ScrollBar _scrollBar;
+
         private const int ThumbnailSize = 100; // Thumbnail width and height
         private const int MarginSize = 10; // Margin around thumbnails
         private int _totalThumbnails;
+        int _firstVisibleThumbnail = 0;
+        int _lastVisibleThumbnail = 0;
+        int _currentSelectedThumbnail = 0;
 
         public event EventHandler<int> ThumbnailClicked; // Event when a thumbnail is clicked
-        
+
         // Control allow user to set width & height
         // Also let user to select horizontal or vertical layout
 
-        public ThumbnailViewerControl()
+        public ThumbnailViewerControl(bool isHorizontal = true)
         {
             _thumbnailPanel = new FlowLayoutPanel
             {
@@ -40,17 +46,31 @@ namespace ThumbnailViewer
                 WrapContents = true,
                 FlowDirection = FlowDirection.LeftToRight
             };
-
-            _scrollBar = new VScrollBar
+            if (isHorizontal)
             {
-                Dock = DockStyle.Right,
-                Width = 20
-            };
+                // add Horizontal scrollbar
+                _scrollBar = new HScrollBar
+                {
+                    Dock = DockStyle.Bottom,
+                    Width = 20
+                };
+            }
+            else
+            {
+                _scrollBar = new VScrollBar
+                {
+                    Dock = DockStyle.Right,
+                    Width = 20
+                };
 
+            }
             _scrollBar.Scroll += ScrollBar_Scroll;
+            _scrollBar.Width = 20;
+
 
             Controls.Add(_thumbnailPanel);
             Controls.Add(_scrollBar);
+
 
             _thumbnailCache = new Dictionary<int, PictureBox>();
 
@@ -65,16 +85,12 @@ namespace ThumbnailViewer
                 if (_thumbnailCache.ContainsKey(index))
                 {
                     _thumbnailCache[index].BorderStyle = BorderStyle.FixedSingle;
+                    _currentSelectedThumbnail = index;
                 }
-                // Now make sure adjust scroll bar so that selected thumbnail is visible
-                int rowIndex = index / GetThumbnailsPerRow();
-                _scrollBar.Value = Math.Max(0, rowIndex - GetVisibleRowCount() / 2);
-
 
             };
-           
         }
-        
+
         // Get index of selected thumbnail
         public int GetSelectedThumbnailIndex()
         {
@@ -95,9 +111,24 @@ namespace ThumbnailViewer
             if (selectedIndex == -1) return;
 
             int nextIndex = selectedIndex + 1;
-            if (nextIndex < _totalThumbnails)
+            if (nextIndex <= _totalThumbnails)
             {
-                ThumbnailClicked?.Invoke(this, nextIndex); 
+
+                if (!_thumbnailCache.ContainsKey(nextIndex))
+                {
+                    CreateThumbnail(nextIndex);
+                }
+                // just adjust _firstVisibleThumbnail, _lastVisibleThumbnail
+                // only increase one count at a time
+                if (nextIndex >= _lastVisibleThumbnail)
+                {
+                    _firstVisibleThumbnail = _lastVisibleThumbnail;
+                    _lastVisibleThumbnail = Math.Min(_totalThumbnails, _firstVisibleThumbnail + GetVisibleRowCount() * GetThumbnailsPerRow());
+                    _scrollBar.Value = _firstVisibleThumbnail / GetThumbnailsPerRow();
+                }
+                _currentSelectedThumbnail = nextIndex;
+
+                LoadVisibleThumbnails(_firstVisibleThumbnail, _lastVisibleThumbnail);
             }
         }
 
@@ -108,10 +139,25 @@ namespace ThumbnailViewer
             if (selectedIndex == -1) return;
 
             int previousIndex = selectedIndex - 1;
+
             if (previousIndex >= 0)
             {
-                ThumbnailClicked?.Invoke(this, previousIndex);
+                if (!_thumbnailCache.ContainsKey(previousIndex))
+                {
+                    CreateThumbnail(previousIndex);
+                }
+                // just adjust _firstVisibleThumbnail, _lastVisibleThumbnail
+                // only increase one count at a time
+                if (previousIndex >= _lastVisibleThumbnail)
+                {
+                    _firstVisibleThumbnail = _lastVisibleThumbnail;
+                    _lastVisibleThumbnail = Math.Min(_totalThumbnails, _firstVisibleThumbnail + GetVisibleRowCount() * GetThumbnailsPerRow());
+                    _scrollBar.Value = _firstVisibleThumbnail / GetThumbnailsPerRow();
+                }
+                _currentSelectedThumbnail = previousIndex;
+                LoadVisibleThumbnails(_firstVisibleThumbnail, _lastVisibleThumbnail);
             }
+
         }
         public void SetThumbnailProvider(IThumbnailProvider provider)
         {
@@ -126,36 +172,59 @@ namespace ThumbnailViewer
             _totalThumbnails = _thumbnailProvider.GetTotalThumbnails();
             _scrollBar.Maximum = Math.Max(0, _totalThumbnails - GetVisibleRowCount() * GetThumbnailsPerRow());
             _scrollBar.Value = 0;
+            // Set start index and last index
+            _firstVisibleThumbnail = 0;
+            _lastVisibleThumbnail = Math.Min(_totalThumbnails, GetVisibleRowCount() * GetThumbnailsPerRow());
 
-            LoadVisibleThumbnails();
+            LoadVisibleThumbnails(_firstVisibleThumbnail, _lastVisibleThumbnail);
         }
 
-        private void LoadVisibleThumbnails()
+        private void CreateThumbnail(int index)
+        {
+            var pictureBox = new PictureBox
+            {
+                Size = new Size(ThumbnailSize, ThumbnailSize),
+                Margin = new Padding(MarginSize),
+                SizeMode = PictureBoxSizeMode.Zoom,
+                Tag = index
+            };
+            pictureBox.Click += Thumbnail_Click;
+            _thumbnailPanel.Controls.Add(pictureBox);
+            _thumbnailCache[index] = pictureBox;
+        }
+
+        private void LoadVisibleThumbnails(int startIndex, int endIndex)
         {
             _thumbnailPanel.Controls.Clear();
             _thumbnailCache.Clear();
 
-            int startIndex = _scrollBar.Value * GetThumbnailsPerRow();
-            int endIndex = Math.Min(startIndex + GetVisibleRowCount() * GetThumbnailsPerRow(), _totalThumbnails);
-
             for (int i = startIndex; i < endIndex; i++)
             {
-                var pictureBox = new PictureBox
+
+                // check if we already have in cache
+                if (!_thumbnailCache.ContainsKey(i))
                 {
-                    Size = new Size(ThumbnailSize, ThumbnailSize),
-                    Margin = new Padding(MarginSize),
-                    BackColor = Color.Gray, // Placeholder color
-                    Tag = i
-                };
+                    CreateThumbnail(i);
+                }
+                // Only load if image was not already loaded
 
-                pictureBox.Click += Thumbnail_Click;
-
-                _thumbnailPanel.Controls.Add(pictureBox);
-                _thumbnailCache[i] = pictureBox;
-
-                // Load the thumbnail image lazily
                 LoadThumbnailImage(i);
             }
+            if (_currentSelectedThumbnail < _firstVisibleThumbnail)
+            {
+                // remove boarder from current selected thumbnail and apply on new selected thumbnail
+                _thumbnailCache[_currentSelectedThumbnail].BorderStyle = BorderStyle.None;
+                _currentSelectedThumbnail = _firstVisibleThumbnail;
+
+
+            }
+            else if (_currentSelectedThumbnail >= _lastVisibleThumbnail)
+            {
+                _thumbnailCache[_currentSelectedThumbnail].BorderStyle = BorderStyle.None;
+                _currentSelectedThumbnail = _lastVisibleThumbnail - 1;
+            }
+            _thumbnailCache[_currentSelectedThumbnail].BorderStyle = BorderStyle.FixedSingle;
+
         }
 
         private void LoadThumbnailImage(int index)
@@ -176,7 +245,9 @@ namespace ThumbnailViewer
 
         private void ScrollBar_Scroll(object sender, ScrollEventArgs e)
         {
-            LoadVisibleThumbnails();
+            int startIndex = _scrollBar.Value * GetThumbnailsPerRow();
+            int endIndex = Math.Min(startIndex + GetVisibleRowCount() * GetThumbnailsPerRow(), _totalThumbnails);
+            LoadVisibleThumbnails(startIndex, endIndex);
         }
 
         private int GetThumbnailsPerRow()
@@ -192,7 +263,7 @@ namespace ThumbnailViewer
 }
 
 public class MockThumbnailProvider : IThumbnailProvider
-{       
+{
     public System.Windows.Forms.TextBox textBox = null;
 
     public int GetTotalThumbnails() => 100;
@@ -200,7 +271,7 @@ public class MockThumbnailProvider : IThumbnailProvider
     // log to text box, GetThumbnail method is called
     public MockThumbnailProvider(ref System.Windows.Forms.TextBox textbox)
     {
-       textBox = textbox;
+        textBox = textbox;
     }
 
 
@@ -219,6 +290,6 @@ public class MockThumbnailProvider : IThumbnailProvider
 
     void IThumbnailProvider.ThumbnailClicked(int index)
     {
-        
+
     }
 }
