@@ -148,9 +148,9 @@ namespace ThumbnailViewer
                 }
                 // just adjust _firstVisibleThumbnail, _lastVisibleThumbnail
                 // only increase one count at a time
-                if (previousIndex >= _lastVisibleThumbnail)
+                if (previousIndex < _firstVisibleThumbnail)
                 {
-                    _firstVisibleThumbnail = _lastVisibleThumbnail;
+                    _firstVisibleThumbnail = previousIndex;
                     _lastVisibleThumbnail = Math.Min(_totalThumbnails, _firstVisibleThumbnail + GetVisibleRowCount() * GetThumbnailsPerRow());
                     _scrollBar.Value = _firstVisibleThumbnail / GetThumbnailsPerRow();
                 }
@@ -223,6 +223,7 @@ namespace ThumbnailViewer
                 _thumbnailCache[_currentSelectedThumbnail].BorderStyle = BorderStyle.None;
                 _currentSelectedThumbnail = _lastVisibleThumbnail - 1;
             }
+            // first check if current selected thumbnail is in cache
             _thumbnailCache[_currentSelectedThumbnail].BorderStyle = BorderStyle.FixedSingle;
 
         }
