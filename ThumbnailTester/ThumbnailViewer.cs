@@ -64,6 +64,8 @@ namespace ThumbnailViewer
                 };
 
             }
+            // instead of calling it every time during scroll we call when scrolling stops
+
             _scrollBar.Scroll += ScrollBar_Scroll;
             _scrollBar.Width = 20;
 
@@ -108,7 +110,7 @@ namespace ThumbnailViewer
         public void SelectNextThumbnail()
         {
             int selectedIndex = GetSelectedThumbnailIndex();
-            if (selectedIndex == -1) return;
+            if (selectedIndex == -1 || selectedIndex== _totalThumbnails -1) return;
 
             int nextIndex = selectedIndex + 1;
             if (nextIndex <= _totalThumbnails)
@@ -170,6 +172,7 @@ namespace ThumbnailViewer
             if (_thumbnailProvider == null) return;
 
             _totalThumbnails = _thumbnailProvider.GetTotalThumbnails();
+            
             _scrollBar.Maximum = Math.Max(0, _totalThumbnails - GetVisibleRowCount() * GetThumbnailsPerRow());
             _scrollBar.Value = 0;
             // Set start index and last index
@@ -212,15 +215,14 @@ namespace ThumbnailViewer
             }
             if (_currentSelectedThumbnail < _firstVisibleThumbnail)
             {
-                // remove boarder from current selected thumbnail and apply on new selected thumbnail
-                _thumbnailCache[_currentSelectedThumbnail].BorderStyle = BorderStyle.None;
+                
                 _currentSelectedThumbnail = _firstVisibleThumbnail;
 
 
             }
             else if (_currentSelectedThumbnail >= _lastVisibleThumbnail)
             {
-                _thumbnailCache[_currentSelectedThumbnail].BorderStyle = BorderStyle.None;
+          
                 _currentSelectedThumbnail = _lastVisibleThumbnail - 1;
             }
             // first check if current selected thumbnail is in cache
@@ -246,9 +248,12 @@ namespace ThumbnailViewer
 
         private void ScrollBar_Scroll(object sender, ScrollEventArgs e)
         {
-            int startIndex = _scrollBar.Value * GetThumbnailsPerRow();
-            int endIndex = Math.Min(startIndex + GetVisibleRowCount() * GetThumbnailsPerRow(), _totalThumbnails);
-            LoadVisibleThumbnails(startIndex, endIndex);
+            _firstVisibleThumbnail = _scrollBar.Value * GetThumbnailsPerRow();
+            //  ensure that we don't go beyond total thumbnails
+            _firstVisibleThumbnail = Math.Min(_firstVisibleThumbnail, _totalThumbnails -1);
+
+            _lastVisibleThumbnail = Math.Min(_firstVisibleThumbnail + GetVisibleRowCount() * GetThumbnailsPerRow(), _totalThumbnails);
+            LoadVisibleThumbnails(_firstVisibleThumbnail, _lastVisibleThumbnail);
         }
 
         private int GetThumbnailsPerRow()
