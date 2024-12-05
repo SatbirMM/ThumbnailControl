@@ -110,7 +110,7 @@ namespace ThumbnailViewer
         public void SelectNextThumbnail()
         {
             int selectedIndex = GetSelectedThumbnailIndex();
-            if (selectedIndex == -1 || selectedIndex== _totalThumbnails -1) return;
+            if (selectedIndex == -1 || selectedIndex== _totalThumbnails) return;
 
             int nextIndex = selectedIndex + 1;
             if (nextIndex <= _totalThumbnails)
