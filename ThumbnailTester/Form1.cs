@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ScleraThumbnailControl;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -7,118 +8,90 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using ThumbnailViewer;
+using ThumbnailTester;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace ThumbnailTester
 {
-    public partial class Form1 : Form
+    public partial class ThumbnailViewerTesting : Form
     {
-        public Form1()
+        ThumbnailProvider mMockThumbnailProvider = new ThumbnailProvider();
+        public ThumbnailViewerTesting()
         {
             InitializeComponent();
-
-            // add a text box to log text into it
-            var textBox = new System.Windows.Forms.TextBox
-            {
-                Dock = DockStyle.Fill,
-                Multiline = true,
-                ScrollBars = ScrollBars.Vertical
-            };
-
-            // Add a panel to the form to display the thumbnails
-            // set panel size to fill the form horizontally and 100 pixels vertically
-            var panel = new Panel
-            {
-                Dock = DockStyle.Top,
-                Height = 200
-            };
-
-            // thumbnailViewer shall be fill the form 
-            var thumbnailViewer = new ThumbnailViewerControl
-            {
-                Dock = DockStyle.Fill
-            };
-
-            // Set the thumbnail provider to a mock thumbnail provider when window is loaded
-
-            Load += (sender, e) =>
-            {
-                thumbnailViewer.SetThumbnailProvider(new MockThumbnailProvider(ref textBox));
-                // Text box shall be below the panel
-                
-
-                textBox.Text = "Window loaded\n";
-                
-            };
-
-           
-            thumbnailViewer.ThumbnailClicked += (sender, index) =>
-            {
-               textBox.Text += $"Thumbnail {index} clicked\n";
-            };
-            panel.Controls.Add( thumbnailViewer );
-
-            this.Controls.Add(panel);
-
-            // now add two buttons to the form to select previous and next thumbnail
-            var buttonPanel = new Panel
-            {
-                Dock = DockStyle.Bottom,
-                Height = 100
-            };
-
-            var textBoxPanel = new Panel
-            {
-                Dock = DockStyle.Bottom,
-                Height = 100
-            };
-
-            var previousButton = new Button
-            {
-                Text = "Previous",
-                Dock = DockStyle.Left
-            };
-
-            previousButton.Click += (sender, e) =>
-            {
-                // add log line to the text box
-                textBox.Text += "Previous button clicked\n";
-                thumbnailViewer.SelectPreviousThumbnail();
-            };
-            buttonPanel.Controls.Add( previousButton );
-
-            var nextButton = new Button
-            {
-                Text = "Next",
-                Dock = DockStyle.Right
-            };
-
-            nextButton.Click += (sender, e) =>
-            {
-                // add log line to the text box
-                textBox.Text += "Next button clicked\n";
-
-                thumbnailViewer.SelectNextThumbnail();
-            };
-
-            buttonPanel.Controls.Add( nextButton );
-
-            this.Controls.Add( buttonPanel );
-
-
             textBox.Multiline = true;
             textBox.ScrollBars = ScrollBars.Vertical;
-            textBox.Dock = DockStyle.Fill;
-            textBox.ScrollBars = ScrollBars.Vertical;
+            textBox.Size = new Size(400, 400);
 
 
 
-            textBoxPanel.Controls.Add(textBox);
-            this.Controls.Add(textBoxPanel);
-          
 
+            thumbnailViewerControl1.ThumbnailClicked += (sender, index) =>
+            {
+                textBox.Text += $"Thumbnail {index} clicked\n";
+            };
+        }
 
+        private void thumbnailViewerControl1_Load(object sender, EventArgs e)
+        {
+            thumbnailViewerControl1.SetThumbnailProvider(mMockThumbnailProvider);
 
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            // add a dummy thumbnail with a random color  in mMockThumbnailProvider
+            // Create a bitmap with random color
+            Bitmap bitmap = new Bitmap(100, 100);
+            Random random = new Random();
+            Color randomColor = Color.Black;
+            using (Graphics g = Graphics.FromImage(bitmap))
+            {
+                g.Clear(randomColor);
+            };  
+            mMockThumbnailProvider.SetBitmap(bitmap);
+
+        }
+
+        private void textBox_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void textBox_TextChanged_1(object sender, EventArgs e)
+        {
+
+        }
+
+        private void ThumbnailViewerTesting_Load(object sender, EventArgs e)
+        {
+
+        }
+
+        private void textBox_TextChanged_2(object sender, EventArgs e)
+        {
+            // change size to fill the panel
+            textBox.Size = new Size(400, 400);
+        }
+
+        private void previousButton_Click(object sender, EventArgs e)
+        {
+            // add log line to the text box
+            textBox.Text = "Previous button clicked\n";
+            thumbnailViewerControl1.SelectPreviousThumbnail();
+        }
+
+        private void nextButton_Click(object sender, EventArgs e)
+        {
+            // add log line to the text box
+            textBox.Text += "Next button clicked\n";
+
+            thumbnailViewerControl1.SelectNextThumbnail();
+        }
+
+        private void clearButton_Click(object sender, EventArgs e)
+        {
+            mMockThumbnailProvider.ClearThumbnails();
         }
     }
 }
