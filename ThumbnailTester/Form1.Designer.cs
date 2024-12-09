@@ -36,6 +36,7 @@
             this.clearButton = new System.Windows.Forms.Button();
             this.flowLayoutPanel2 = new System.Windows.Forms.FlowLayoutPanel();
             this.textBox = new System.Windows.Forms.TextBox();
+            this.customCircleControl1 = new CustomCircleControl();
             this.flowLayoutPanel1.SuspendLayout();
             this.flowLayoutPanel2.SuspendLayout();
             this.SuspendLayout();
@@ -53,7 +54,9 @@
             // thumbnailViewerControl1
             // 
             this.thumbnailViewerControl1.Location = new System.Drawing.Point(12, 24);
+            this.thumbnailViewerControl1.mBorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.thumbnailViewerControl1.Name = "thumbnailViewerControl1";
+            this.thumbnailViewerControl1.SelectNewThumbnailOnAdd = true;
             this.thumbnailViewerControl1.Size = new System.Drawing.Size(189, 593);
             this.thumbnailViewerControl1.TabIndex = 0;
             this.thumbnailViewerControl1.Load += new System.EventHandler(this.thumbnailViewerControl1_Load);
@@ -116,11 +119,37 @@
             this.textBox.Size = new System.Drawing.Size(471, 20);
             this.textBox.TabIndex = 4;
             // 
+            // customCircleControl1
+            // 
+            this.customCircleControl1.Circle1Segment1 = System.Drawing.Color.Red;
+            this.customCircleControl1.Circle1Segment2 = System.Drawing.Color.Green;
+            this.customCircleControl1.Circle1Segment3 = System.Drawing.Color.Blue;
+            this.customCircleControl1.Circle1Segment4 = System.Drawing.Color.Yellow;
+            this.customCircleControl1.Circle2Segment1 = System.Drawing.Color.Orange;
+            this.customCircleControl1.Circle2Segment2 = System.Drawing.Color.Purple;
+            this.customCircleControl1.Circle2Segment3 = System.Drawing.Color.Cyan;
+            this.customCircleControl1.Circle2Segment4 = System.Drawing.Color.Magenta;
+            this.customCircleControl1.Circle3Segment1 = System.Drawing.Color.Pink;
+            this.customCircleControl1.Circle3Segment2 = System.Drawing.Color.Brown;
+            this.customCircleControl1.Circle3Segment3 = System.Drawing.Color.Lime;
+            this.customCircleControl1.Circle3Segment4 = System.Drawing.Color.Teal;
+            this.customCircleControl1.Circle4Segment1 = System.Drawing.Color.Gray;
+            this.customCircleControl1.Circle4Segment2 = System.Drawing.Color.Maroon;
+            this.customCircleControl1.Circle4Segment3 = System.Drawing.Color.Navy;
+            this.customCircleControl1.Circle4Segment4 = System.Drawing.Color.Olive;
+            this.customCircleControl1.InnerCircleColor = System.Drawing.Color.Black;
+            this.customCircleControl1.Location = new System.Drawing.Point(1034, 359);
+            this.customCircleControl1.Name = "customCircleControl1";
+            this.customCircleControl1.Size = new System.Drawing.Size(150, 150);
+            this.customCircleControl1.TabIndex = 0;
+            this.customCircleControl1.Load += new System.EventHandler(this.customCircleControl1_Load);
+            // 
             // ThumbnailViewerTesting
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1274, 787);
+            this.Controls.Add(this.customCircleControl1);
             this.Controls.Add(this.flowLayoutPanel2);
             this.Controls.Add(this.flowLayoutPanel1);
             this.Controls.Add(this.thumbnailViewerControl1);
@@ -144,6 +173,7 @@
         private System.Windows.Forms.Button previousButton;
         private System.Windows.Forms.Button nextButton;
         private System.Windows.Forms.Button clearButton;
+        private CustomCircleControl customCircleControl1;
     }
 }
 

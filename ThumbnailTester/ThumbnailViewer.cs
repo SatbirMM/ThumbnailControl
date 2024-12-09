@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 using ScleraThumbnailControl;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace ScleraThumbnailControl
 {
@@ -19,26 +20,43 @@ namespace ScleraThumbnailControl
 
     public class ThumbnailViewerControl : UserControl
     {
-        //https://learn.microsoft.com/en-us/dotnet/desktop/winforms/controls/flowlayoutpanel-control-overview?view=netframeworkdesktop-4.8
         private readonly FlowLayoutPanel mThumbnailPanel;
         private IThumbnailProvider _thumbnailProvider;
         private readonly Dictionary<int, PictureBox> mThumbnailCache;
         private readonly System.Windows.Forms.ScrollBar mScrollBar;
+        private int mTotalThumbnails;
+        private int mFirstVisibleThumbnail = 0;
+        private int mLastVisibleThumbnail = 0;
+        private int mCurrentSelectedThumbnail = 0;
+        private bool mAdjustCurrentSelected = false;
 
-        private const int ThumbnailSize = 100; // Thumbnail width and height
-        private const int MarginSize = 1; // Margin around thumbnails
-        private int _totalThumbnails;
-        int mFirstVisibleThumbnail = 0;
-        int mLastVisibleThumbnail = 0;
-        int mCurrentSelectedThumbnail = 0;
-        // Set this if you want to select new thumbnail when it is added
+        /// <summary>
+        ///Thumbnail width and height, set it as per your requirements
+        /// </summary>
+        public const int mThumbnailSize = 100;
+        /// <summary>
+        /// Set Margin as per your requirements
+        /// </summary>
+        public const int mMarginSize = 1;
+        /// <summary>
+        /// Set this if you want to select new thumbnail when it is added
+        /// </summary>
         public bool SelectNewThumbnailOnAdd { get; set; } = true;
-
-        public event EventHandler<int> ThumbnailClicked; // Event when a thumbnail is clicked
+        /// <summary>
+        /// Event when a thumbnail is clicked
+        /// </summary>
+        public event EventHandler<int> ThumbnailClicked;
+        public BorderStyle mBorderStyle { get; set; }
+        /// <summary>
+        /// temporary debug feature
+        /// </summary>
+        public System.Windows.Forms.TextBox mLogger = null;
 
 
         public ThumbnailViewerControl()
         {
+            mBorderStyle = BorderStyle.FixedSingle;
+            mCurrentSelectedThumbnail = 0;
             mThumbnailPanel = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
@@ -69,6 +87,8 @@ namespace ScleraThumbnailControl
 
             mScrollBar.Scroll += ScrollBar_Scroll;
             mScrollBar.Width = 20;
+            mScrollBar.Minimum = 0;
+            mScrollBar.Maximum = 1;
 
 
             Controls.Add(mThumbnailPanel);
@@ -80,20 +100,33 @@ namespace ScleraThumbnailControl
             // When user click on a thumbnail draw a border around it
             ThumbnailClicked += (sender, index) =>
             {
-                foreach (var pictureBox in mThumbnailCache.Values)
-                {
-                    pictureBox.BorderStyle = BorderStyle.None;
-                }
-
-                if (mThumbnailCache.ContainsKey(index))
-                {
-                    mThumbnailCache[index].BorderStyle = BorderStyle.FixedSingle;
-                    mThumbnailCache[index].Padding = new Padding(20);
-                    mThumbnailCache[index].BackColor = Color.Transparent;
-                    mCurrentSelectedThumbnail = index;
-                }
+                Log("Value: " + mScrollBar.Value.ToString());
+                Log("Maximum: " + mScrollBar.Maximum.ToString());
+                Log("Minimum: " + mScrollBar.Minimum.ToString());
+                SetBorderStyle(index);
+                mScrollBar.Value = index;
+                Log("Value: " + mScrollBar.Value.ToString());
+                Log("Maximum: " + mScrollBar.Maximum.ToString());
+                Log("Minimum: " + mScrollBar.Minimum.ToString());
 
             };
+        }
+
+        private void SetBorderStyle(int index)
+        {
+            foreach (var pictureBox in mThumbnailCache.Values)
+            {
+                pictureBox.BorderStyle = BorderStyle.None;
+                pictureBox.BackColor = Color.Transparent;
+            }
+
+            if (mThumbnailCache.ContainsKey(index))
+            {
+                mThumbnailCache[index].BorderStyle = mBorderStyle;
+                mThumbnailCache[index].Padding = new Padding(1);
+                mThumbnailCache[index].BackColor = Color.Red;
+                mCurrentSelectedThumbnail = index;
+            }
         }
 
         // Get index of selected thumbnail
@@ -101,24 +134,33 @@ namespace ScleraThumbnailControl
         {
             foreach (var pictureBox in mThumbnailCache.Values)
             {
-                if (pictureBox.BorderStyle == BorderStyle.FixedSingle)
+                if (pictureBox.BorderStyle == mBorderStyle)
                 {
                     return (int)pictureBox.Tag;
                 }
             }
             return -1;
         }
+        private void Log(string message)
+        {
+            if (mLogger != null)
+            {
+                mLogger.AppendText(message);
+                mLogger.AppendText(Environment.NewLine);
+            }
+        }
 
         // select next thumbnail
         public void SelectNextThumbnail()
         {
-            Console.WriteLine("SelectNextThumbnail");
+            Log("SelectNextThumbnail");
+            mAdjustCurrentSelected = false;
 
             int selectedIndex = GetSelectedThumbnailIndex();
-            if (selectedIndex == -1 || selectedIndex == _totalThumbnails) return;
+            if (selectedIndex == -1 || selectedIndex == mTotalThumbnails - 1) return;
 
             int nextIndex = selectedIndex + 1;
-            if (nextIndex <= _totalThumbnails)
+            if (nextIndex <= mTotalThumbnails)
             {
 
                 if (!mThumbnailCache.ContainsKey(nextIndex))
@@ -129,8 +171,8 @@ namespace ScleraThumbnailControl
                 // only increase one count at a time
                 if (nextIndex >= mLastVisibleThumbnail)
                 {
-                    mFirstVisibleThumbnail = mLastVisibleThumbnail;
-                    mLastVisibleThumbnail = Math.Min(_totalThumbnails, mFirstVisibleThumbnail + GetVisibleRowCount() * GetThumbnailsPerRow());
+                    mLastVisibleThumbnail = nextIndex;
+                    mFirstVisibleThumbnail = Math.Max(0, mLastVisibleThumbnail - GetThumbnailsPerRow());
                     mScrollBar.Value = mFirstVisibleThumbnail / GetThumbnailsPerRow();
                 }
                 mCurrentSelectedThumbnail = nextIndex;
@@ -142,6 +184,7 @@ namespace ScleraThumbnailControl
         // select previous thumbnail
         public void SelectPreviousThumbnail()
         {
+            mAdjustCurrentSelected = true;
             int selectedIndex = GetSelectedThumbnailIndex();
             if (selectedIndex == -1) return;
 
@@ -158,7 +201,7 @@ namespace ScleraThumbnailControl
                 if (previousIndex < mFirstVisibleThumbnail)
                 {
                     mFirstVisibleThumbnail = previousIndex;
-                    mLastVisibleThumbnail = Math.Min(_totalThumbnails, mFirstVisibleThumbnail + GetVisibleRowCount() * GetThumbnailsPerRow());
+                    mLastVisibleThumbnail = Math.Min(mTotalThumbnails - 1, mFirstVisibleThumbnail + GetVisibleRowCount() * GetThumbnailsPerRow());
                     mScrollBar.Value = mFirstVisibleThumbnail / GetThumbnailsPerRow();
                 }
                 mCurrentSelectedThumbnail = previousIndex;
@@ -171,12 +214,14 @@ namespace ScleraThumbnailControl
             _thumbnailProvider = provider ?? throw new ArgumentNullException(nameof(provider));
             _thumbnailProvider.ThumbnailAdded += (sender, index) =>
             {
-                LoadThumbnails();
-                if(SelectNewThumbnailOnAdd)
+                if (SelectNewThumbnailOnAdd)
                 {
+                    mAdjustCurrentSelected = false;
                     mCurrentSelectedThumbnail = index;
                     ThumbnailClicked?.Invoke(this, index);
                 }
+                LoadThumbnails();
+
             };
             LoadThumbnails();
         }
@@ -185,29 +230,30 @@ namespace ScleraThumbnailControl
         {
             if (_thumbnailProvider == null) return;
 
-            _totalThumbnails = _thumbnailProvider.GetTotalThumbnails();
-            if(_totalThumbnails == 0)
+            mTotalThumbnails = _thumbnailProvider.GetTotalThumbnails();
+            if (mTotalThumbnails == 0)
             {
                 mThumbnailPanel.Controls.Clear();
                 mThumbnailCache.Clear();
                 return;
             }
 
-            mScrollBar.Maximum = Math.Max(0, _totalThumbnails * GetThumbnailsPerRow());
-            mScrollBar.Value = 0;
-            // Set start index and last index
-            mFirstVisibleThumbnail = 0;
-            mLastVisibleThumbnail = Math.Min(_totalThumbnails, GetVisibleRowCount() * GetThumbnailsPerRow());
+            mScrollBar.Maximum = Math.Max(0, mTotalThumbnails * mThumbnailSize);
+            mLastVisibleThumbnail = mCurrentSelectedThumbnail;
+
+            mFirstVisibleThumbnail = Math.Max(0, mLastVisibleThumbnail - GetVisibleRowCount() * GetThumbnailsPerRow());
 
             LoadVisibleThumbnails(mFirstVisibleThumbnail, mLastVisibleThumbnail);
+            mScrollBar.Value = mLastVisibleThumbnail;
+            Log(mScrollBar.Value.ToString());
         }
 
         private void CreateThumbnail(int index)
         {
             var pictureBox = new PictureBox
             {
-                Size = new Size(ThumbnailSize, ThumbnailSize),
-                Margin = new Padding(MarginSize),
+                Size = new Size(mThumbnailSize, mThumbnailSize),
+                Margin = new Padding(mMarginSize),
                 SizeMode = PictureBoxSizeMode.AutoSize,
                 Tag = index
             };
@@ -218,43 +264,46 @@ namespace ScleraThumbnailControl
 
         private void LoadVisibleThumbnails(int startIndex, int endIndex)
         {
-            if (_totalThumbnails == 0)
+
+            if (mTotalThumbnails == 0)
             {
-                Console.WriteLine("No thumbnails to load");
+                Log("No thumbnails to load");
                 return;
             }
-            
+            mThumbnailPanel.Controls.Clear();
+            mThumbnailCache.Clear();
 
-            for (int i = startIndex; i < endIndex; i++)
+            for (int i = startIndex; i <= endIndex; i++)
             {
 
                 // check if we already have in cache
                 if (!mThumbnailCache.ContainsKey(i))
                 {
-                    Console.WriteLine($"Creating thumbnail {i}");
+                    Log($"Creating thumbnail {i}");
                     CreateThumbnail(i);
                 }
                 else
                 {
-                    Console.WriteLine($"Thumbnail {i} already exists");
+                    Log($"Thumbnail {i} already exists");
                 }
                 LoadThumbnailImage(i);
             }
-            if (mCurrentSelectedThumbnail < mFirstVisibleThumbnail)
+            if (mAdjustCurrentSelected)
             {
+                if (mCurrentSelectedThumbnail < mFirstVisibleThumbnail)
+                {
 
-                mCurrentSelectedThumbnail = mFirstVisibleThumbnail;
+                    mCurrentSelectedThumbnail = mFirstVisibleThumbnail;
 
 
+                }
+                else if (mCurrentSelectedThumbnail >= mLastVisibleThumbnail)
+                {
+
+                    mCurrentSelectedThumbnail = mLastVisibleThumbnail - 1;
+                }
             }
-            else if (mCurrentSelectedThumbnail >= mLastVisibleThumbnail)
-            {
-
-                mCurrentSelectedThumbnail = mLastVisibleThumbnail - 1;
-            }
-            // first check if current selected thumbnail is in cache
-            mThumbnailCache[mCurrentSelectedThumbnail].BorderStyle = BorderStyle.Fixed3D;
-
+            SetBorderStyle(mCurrentSelectedThumbnail);
         }
 
         private void LoadThumbnailImage(int index)
@@ -275,22 +324,27 @@ namespace ScleraThumbnailControl
 
         private void ScrollBar_Scroll(object sender, ScrollEventArgs e)
         {
+            mAdjustCurrentSelected = true;
             mFirstVisibleThumbnail = mScrollBar.Value * GetThumbnailsPerRow();
             //  ensure that we don't go beyond total thumbnails
-            mFirstVisibleThumbnail = Math.Min(mFirstVisibleThumbnail, _totalThumbnails - 1);
+            mFirstVisibleThumbnail = Math.Min(mFirstVisibleThumbnail, mTotalThumbnails - 1);
 
-            mLastVisibleThumbnail = Math.Min(mFirstVisibleThumbnail + GetVisibleRowCount() * GetThumbnailsPerRow(), _totalThumbnails);
+            mLastVisibleThumbnail = Math.Min(mFirstVisibleThumbnail + GetVisibleRowCount() * GetThumbnailsPerRow(), mTotalThumbnails - 1);
             LoadVisibleThumbnails(mFirstVisibleThumbnail, mLastVisibleThumbnail);
+
+            Log("Value: " + mScrollBar.Value.ToString());
+            Log("Maximum: " + mScrollBar.Maximum.ToString());
+            Log("Minimum: " + mScrollBar.Minimum.ToString());
         }
 
         private int GetThumbnailsPerRow()
         {
-            return Math.Max(1, mThumbnailPanel.Width / (ThumbnailSize + MarginSize * 2));
+            return Math.Max(1, mThumbnailPanel.Width / (mThumbnailSize + mMarginSize * 2));
         }
 
         private int GetVisibleRowCount()
         {
-            return Math.Max(1, Height / (ThumbnailSize + MarginSize * 2));
+            return Math.Max(1, Height / (mThumbnailSize + mMarginSize * 2));
         }
     }
 }
@@ -298,9 +352,13 @@ namespace ScleraThumbnailControl
 public class ThumbnailProvider : IThumbnailProvider
 {
 
-    // store bitmap in list
+    /// <summary>
+    /// Store bitmap data here
+    /// </summary>
     private List<Bitmap> mBitmaps = new List<Bitmap>();
-
+    /// <summary>
+    /// 
+    /// </summary>
     public System.Windows.Forms.TextBox textBox = null;
 
     public event EventHandler<int> ThumbnailAdded;
@@ -312,9 +370,18 @@ public class ThumbnailProvider : IThumbnailProvider
     public ThumbnailProvider()
     {
     }
+    private void Log(string message)
+    {
+        if (textBox != null)
+        {
+            textBox.AppendText(message);
+            textBox.AppendText(Environment.NewLine);
+
+        }
+    }
     public void SetBitmap(Bitmap bitmap)
     {
-        Console.WriteLine("SetBitmap");
+        Log("SetBitmap\n");
         mBitmaps.Add(bitmap);
         // fire event when new thumbnail is added
         ThumbnailAdded?.Invoke(this, mBitmaps.Count - 1);
@@ -323,21 +390,21 @@ public class ThumbnailProvider : IThumbnailProvider
 
     public Image GetThumbnail(int index)
     {
-        Console.WriteLine($"GetThumbnail {index}");
+        Log($"GetThumbnail {index}\n");
         return mBitmaps[index];
     }
 
     void IThumbnailProvider.ThumbnailClicked(int index)
     {
-        Console.WriteLine($"ThumbnailClicked {index}");
+        Log($"ThumbnailClicked {index}\n");
     }
 
     public void ClearThumbnails()
     {
 
-       Console.WriteLine("ClearThumbnails");
+        Log("ClearThumbnails");
         mBitmaps.Clear();
-       ThumbnailAdded?.Invoke(this, 0);
+        ThumbnailAdded?.Invoke(this, 0);
 
     }
 }
