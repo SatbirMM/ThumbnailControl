@@ -89,7 +89,7 @@ public class CustomCircleControl : UserControl
                 // Draw border for the selected quadrant
                 if (mQuadrantSelected == j)
                 {
-                    using (Pen borderPen = new Pen(Color.Red, 2))
+                    using (Pen borderPen = new Pen(Color.Black, 4))
                     {
                         g.DrawPie(borderPen,
                                   centerX - outerRadius, centerY - outerRadius,
@@ -176,19 +176,20 @@ public class CustomCircleControl : UserControl
         int dy = centerY - e.Y; // Invert Y because screen coordinates increase downward
 
         // Calculate the angle in degrees
-        double angle = Math.Atan2(dy, dx) * (180 / Math.PI); // Convert radians to degrees
+        double angle = -1 *  Math.Atan2(dy, dx) * (180 / Math.PI); // Convert radians to degrees
+        
         if (angle < 0)
             angle += 360; // Normalize the angle to be in the range [0, 360]
 
         // Determine the quadrant based on the angle
         if (angle >= 45 && angle < 135)
-            mQuadrantSelected = 2; // Top-left (45° to 135°)
+            mQuadrantSelected = 0; // Top-left (45° to 135°)
         else if (angle >= 135 && angle < 225)
-            mQuadrantSelected = 3; // Bottom-left (135° to 225°)
+            mQuadrantSelected = 1; // Bottom-left (135° to 225°)
         else if (angle >= 225 && angle < 315)
-            mQuadrantSelected = 4; // Bottom-right (225° to 315°)
+            mQuadrantSelected = 2; // Bottom-right (225° to 315°)
         else
-            mQuadrantSelected = 1; // Top-right (315° to 45°)
+            mQuadrantSelected = 3; // Top-right (315° to 45°)
 
         // Trigger a repaint to update the control
         Invalidate();

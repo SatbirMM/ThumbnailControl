@@ -138,9 +138,9 @@
             this.customCircleControl1.Circle4Segment3 = System.Drawing.Color.Navy;
             this.customCircleControl1.Circle4Segment4 = System.Drawing.Color.Olive;
             this.customCircleControl1.InnerCircleColor = System.Drawing.Color.Black;
-            this.customCircleControl1.Location = new System.Drawing.Point(1034, 359);
+            this.customCircleControl1.Location = new System.Drawing.Point(574, 199);
             this.customCircleControl1.Name = "customCircleControl1";
-            this.customCircleControl1.Size = new System.Drawing.Size(150, 150);
+            this.customCircleControl1.Size = new System.Drawing.Size(610, 310);
             this.customCircleControl1.TabIndex = 0;
             this.customCircleControl1.Load += new System.EventHandler(this.customCircleControl1_Load);
             // 
